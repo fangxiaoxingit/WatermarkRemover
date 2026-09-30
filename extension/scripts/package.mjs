@@ -45,7 +45,7 @@ async function collect(dir) {
       throw new Error(`Unexpected build file: ${key}`);
     entries[key] = [
       new Uint8Array(await readFile(path)),
-      { mtime: new Date("2020-01-01T00:00:00Z") },
+      { mtime: new Date(2020, 0, 1) },
     ];
   }
 }

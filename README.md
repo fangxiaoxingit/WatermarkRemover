@@ -1,5 +1,7 @@
 # AI 原图导出
 
+[官网与安装指南](https://www.xiaoxinnote.com/ai-original-export) · [下载最新版](https://github.com/fangxiaoxingit/WatermarkRemover/releases/latest/download/ai-original-export.zip)
+
 从支持的 AI 聊天平台中选择并导出平台提供的原始图片，支持单张下载、批量逐张保存和 ZIP 打包。
 
 桌面 Chrome / Edge 扩展，使用 Manifest V3，最低 Chrome 116。当前支持千问、豆包，后续可扩展其他平台。扩展提取平台已有的原图，不进行像素修复；原图本身仍可能含水印。

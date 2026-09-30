@@ -29,7 +29,7 @@ export async function fetchImage(
         await response.body?.cancel();
         throw new DownloadError(
           response.status === 401 || response.status === 403
-            ? "链接已过期或缺少权限，请刷新聊天页重新获取"
+            ? "链接已过期或缺少权限，请刷新当前页面重新获取"
             : `获取失败（HTTP ${response.status}）`,
           response.status >= 500 || response.status === 429,
         );
@@ -41,7 +41,7 @@ export async function fetchImage(
       const type = response.headers.get("content-type") || "";
       if (/text\/|application\/json/i.test(type)) {
         await response.body?.cancel();
-        throw new DownloadError("平台返回了非图片内容，请刷新聊天页重试");
+        throw new DownloadError("平台返回了非图片内容，请刷新当前页面重试");
       }
       const reader = response.body?.getReader();
       if (!reader) throw new DownloadError("图片内容为空");

@@ -179,7 +179,7 @@ async function handle(m: any, sender: chrome.runtime.MessageSender) {
   if (m.type === "CREATE_TASK") {
     const context = senderContext(sender);
     if (!context || sender.tab?.id === undefined)
-      throw new Error("请从支持的聊天页面导出");
+      throw new Error("请从支持的聊天页或分享页导出");
     const prefs = await chrome.storage.local.get("platforms");
     if (prefs.platforms?.[context.platform] === false)
       throw new Error("该平台已停用");

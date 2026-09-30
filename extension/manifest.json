@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI 原图导出",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "minimum_chrome_version": "116",
   "description": "从支持的 AI 聊天平台中选择并导出平台提供的原始图片，支持单张下载和 ZIP 批量打包。",
   "permissions": ["downloads", "storage", "activeTab", "offscreen"],

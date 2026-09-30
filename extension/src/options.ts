@@ -8,7 +8,10 @@ const header = el("header", "page-header"),
 brand.href = "options.html";
 brand.innerHTML = logo;
 brand.append(el("span", "", "AI 原图导出"));
-header.append(brand, el("span", "version", `v${chrome.runtime.getManifest().version}`));
+header.append(
+  brand,
+  el("span", "version", `v${chrome.runtime.getManifest().version}`),
+);
 app.append(header);
 const layout = el("div", "settings-layout"),
   aside = el("aside", "sidebar");
@@ -42,7 +45,7 @@ helpPage.hidden = true;
 platformPage.append(
   el("span", "eyebrow", "CONNECTED PLATFORMS"),
   el("h2", "section-title", "从你创作的地方开始"),
-  el("p", "lead", "启用需要的平台，在聊天页发现并导出原图。"),
+  el("p", "lead", "启用需要的平台，在聊天页或分享页发现并导出原图。"),
 );
 const toast = el("p", "save-status");
 toast.setAttribute("role", "status");
@@ -71,7 +74,7 @@ for (const [key, p] of Object.entries(platforms)) {
         platforms: { ...values, [key]: input.checked },
       });
       toast.textContent = input.checked
-        ? `已启用${p.name}，请刷新已打开的聊天页。`
+        ? `已启用${p.name}，请刷新已打开的聊天页或分享页。`
         : `已停用${p.name}，已启动的下载会继续。`;
     } catch (error) {
       input.checked = !input.checked;
@@ -106,12 +109,12 @@ platformPage.append(
 helpPage.append(
   el("span", "eyebrow", "A LITTLE GUIDANCE"),
   el("h2", "section-title", "几步，带走你的原图"),
-  el("p", "lead", "首次安装后，请刷新已经打开的千问或豆包聊天页。"),
+  el("p", "lead", "首次安装或更新后，请刷新已打开的千问或豆包聊天页、分享页。"),
 );
 const steps = [
   [
-    "打开聊天",
-    "进入千问或豆包的聊天，等待图片生成完成。向上滚动可加载更多历史图片。",
+    "打开聊天或分享页",
+    "进入千问或豆包的聊天页，或直接打开其分享链接。等待生成图片加载完成；聊天页向上滚动可加载更多历史图片。",
   ],
   [
     "选择原图",
@@ -138,11 +141,15 @@ helpPage.append(el("h3", "faq-title", "遇到问题时"));
 for (const [question, answer] of [
   [
     "为什么没有识别到图片？",
-    "先刷新聊天页，等待生成完成，再向上滚动加载历史后重新扫描。确认该平台已启用。只识别当前会话已经加载的生成图，不包含上传的参考图。",
+    "确认该平台已启用，等待生成图片加载完成，再重新扫描。聊天页可向上滚动加载历史；分享页只识别当前分享中已加载的生成图，不包含上传的参考图。首次安装或更新后请刷新当前页面。",
   ],
   [
     "下载失败或链接过期怎么办？",
-    "临时网络错误会自动重试。权限不足或签名过期时，请刷新聊天页重新导出；部分成功的 ZIP 会保留成功图片，并附未完成说明。在进度条旁点击“重试失败项”即可仅重试失败图片。逐张下载取消后重试，也只下载尚未保存的图片。",
+    "临时网络错误会自动重试。权限不足或签名过期时，请刷新当前聊天页或分享页重新导出；部分成功的 ZIP 会保留成功图片，并附未完成说明。在进度条旁点击“重试失败项”即可仅重试失败图片。逐张下载取消后重试，也只下载尚未保存的图片。",
+  ],
+  [
+    "分享链接也能导出吗？",
+    "支持千问分享页和豆包 /thread/ 分享页。直接打开分享链接，等待图片加载后点击“导出原图”。仅导出当前分享公开展示、且平台提供原图资源的生成图片，不会读取其他聊天。",
   ],
   [
     "豆包导出的原图仍有水印？",

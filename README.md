@@ -11,9 +11,9 @@
 1. 从 [最新 Release](https://github.com/fangxiaoxingit/WatermarkRemover/releases/latest) 下载 `ai-original-export.zip` 并解压。
 2. 打开 `chrome://extensions/`（Edge 为 `edge://extensions/`），启用开发者模式。
 3. 点击“加载未打包的扩展程序”，选择解压后包含 `manifest.json` 的目录。
-4. 刷新聊天页面，点击右下角“导出原图”；工具栏入口提供设置与平台说明。
+4. 刷新聊天页或分享页，点击右下角“导出原图”；工具栏入口提供设置与平台说明。
 
-更新时解压新版本，重新加载扩展并刷新聊天页。当前通过 GitHub 分发，尚未上架浏览器扩展商店。
+更新时解压新版本，重新加载扩展并刷新聊天页或分享页。当前通过 GitHub 分发，尚未上架浏览器扩展商店。
 
 ## 功能与支持范围
 
@@ -58,9 +58,9 @@ GitHub Actions 在主分支推送和 Pull Request 时运行测试与构建。推
 发布下一版时，先同步上述版本与锁文件，提交后执行：
 
 ```sh
-git tag -a v0.2.5 -m "发布 v0.2.5"
+git tag -a v0.2.6 -m "发布 v0.2.6"
 git push origin main
-git push origin v0.2.5
+git push origin v0.2.6
 ```
 
 示例标签需替换为待发布版本。工作流也可手动运行：在分支上运行仅生成构建产物，在版本标签上运行会发布或更新该标签的 Release。

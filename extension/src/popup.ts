@@ -23,7 +23,7 @@ app.append(
           await chrome.tabs.sendMessage(tab.id, { type: "OPEN_PANEL" });
           window.close();
         } catch {
-          status.textContent = "请刷新聊天页，再打开图片面板。";
+          status.textContent = "请刷新当前页面，再打开图片面板。";
         }
     },
     "primary",
@@ -36,7 +36,7 @@ void (async () => {
     settings = await getSettings();
   status.textContent = context
     ? `${platforms[context.platform].name} · ${settings[context.platform] ? "已启用" : "已停用，请在设置中启用"}`
-    : "当前页面不支持，请打开千问或豆包聊天。";
+    : "当前页面不支持，请打开千问或豆包聊天页、分享页。";
   const tasks = await request<any[]>({ type: "LIST_TASKS" });
   if (tasks.length) {
     app.append(el("h3", "recent-title", "最近任务"));
@@ -46,7 +46,7 @@ void (async () => {
         () => {
           if (t.ownerTab)
             void chrome.tabs.update(t.ownerTab, { active: true }).catch(() => {
-              status.textContent = "原聊天页已关闭，请重新打开聊天。";
+              status.textContent = "原页面已关闭，请重新打开聊天页或分享页。";
             });
         },
         "task-link",

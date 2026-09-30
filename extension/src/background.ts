@@ -23,6 +23,19 @@ function serialized<T>(key: string, work: () => Promise<T>): Promise<T> {
 }
 const fromExtension = (sender: chrome.runtime.MessageSender, path?: string) =>
   isExtensionPage(sender.url || "", chrome.runtime.id, path);
+// Chrome keeps sender.url at the document's initial URL after SPA navigation.
+// MessageSender.tab contains the browser's current URL; never infer scope from assets.
+function senderContext(sender: chrome.runtime.MessageSender) {
+  if (sender.tab?.id === undefined || sender.frameId !== 0) return null;
+  try {
+    const currentUrl = sender.tab.url || "";
+    if (new URL(sender.url || "").origin !== new URL(currentUrl).origin)
+      return null;
+    return contextFromUrl(currentUrl);
+  } catch {
+    return null;
+  }
+}
 const fromRunner = (sender: chrome.runtime.MessageSender) =>
   fromExtension(sender, "/offscreen.html") && !sender.tab;
 async function readTask(id: string): Promise<Task> {
@@ -73,7 +86,7 @@ async function allTasks(): Promise<Task[]> {
     .map(([, task]) => task);
 }
 function assertOwner(task: Task, sender: chrome.runtime.MessageSender) {
-  const context = contextFromUrl(sender.url || "");
+  const context = senderContext(sender);
   if (
     task.ownerTab !== sender.tab?.id ||
     !context ||
@@ -158,13 +171,13 @@ chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
 async function handle(m: any, sender: chrome.runtime.MessageSender) {
   if (sender.id !== chrome.runtime.id) throw new Error("无效来源");
   if (m.type === "OPEN_OPTIONS") {
-    if (!fromExtension(sender) && !contextFromUrl(sender.url || ""))
+    if (!fromExtension(sender) && !senderContext(sender))
       throw new Error("不支持此页面");
     await chrome.runtime.openOptionsPage();
     return;
   }
   if (m.type === "CREATE_TASK") {
-    const context = contextFromUrl(sender.url || "");
+    const context = senderContext(sender);
     if (!context || sender.tab?.id === undefined)
       throw new Error("请从支持的聊天页面导出");
     const prefs = await chrome.storage.local.get("platforms");
@@ -190,7 +203,7 @@ async function handle(m: any, sender: chrome.runtime.MessageSender) {
     return start(assets, mode, sender.tab.id);
   }
   if (m.type === "CURRENT_TASK") {
-    const context = contextFromUrl(sender.url || "");
+    const context = senderContext(sender);
     if (!context || sender.tab?.id === undefined)
       throw new Error("不支持此页面");
     const task = (await allTasks())

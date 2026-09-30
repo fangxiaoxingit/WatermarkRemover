@@ -58,22 +58,36 @@ function scan() {
       let fiber = (image as any)[key],
         candidate: any = null,
         messageId = "",
-        conversationId = "";
-      for (let n = 0; fiber && n < 25; n++, fiber = fiber.return) {
+        conversationId = "",
+        shareId = "";
+      const shared = current.conversationId.startsWith("thread:");
+      for (
+        let n = 0;
+        fiber && n < (shared ? 60 : 25);
+        n++, fiber = fiber.return
+      ) {
         const p = fiber.memoizedProps || {};
         if (
           !candidate &&
           (p.imageContent?.image_ori_raw || p.item?.image_ori_raw)
         )
           candidate = p.imageContent || p.item;
+        if (p.shareId && !shareId) shareId = String(p.shareId);
         if (p.conversationId) conversationId = String(p.conversationId);
         if (p.message?.conversation_id)
           conversationId = String(p.message.conversation_id);
         if (p.messageId || p.message?.message_id)
           messageId = String(p.messageId || p.message.message_id);
-        if (candidate && conversationId && messageId) break;
+        if (candidate && messageId && (shared ? shareId : conversationId))
+          break;
       }
-      if (!candidate || conversationId !== current.conversationId) continue;
+      if (
+        !candidate ||
+        (shared
+          ? !messageId || `thread:${shareId}` !== current.conversationId
+          : conversationId !== current.conversationId)
+      )
+        continue;
       const raw = candidate.image_ori_raw;
       if (typeof raw?.url !== "string" || /watermark|cgen_lwm/i.test(raw.url))
         continue;
@@ -85,7 +99,9 @@ function scan() {
           originalUrl: raw.url,
           width: raw.width,
           height: raw.height,
-          source: "rendered creation.image_ori_raw",
+          source: shared
+            ? "shared creation.image_ori_raw"
+            : "rendered creation.image_ori_raw",
         },
         current,
       );

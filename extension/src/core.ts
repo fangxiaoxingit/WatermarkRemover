@@ -15,6 +15,10 @@ export function contextFromUrl(raw: string): Context | null {
         ? "doubao"
         : null;
     if (!platform) return null;
+    if (platform === "doubao") {
+      const shared = u.pathname.match(/^\/thread\/([\w-]+)\/?$/);
+      if (shared) return { platform, conversationId: `thread:${shared[1]}` };
+    }
     const m = u.pathname.match(
       platform === "qianwen"
         ? /^\/(?:share\/)?chat\/([\w-]+)\/?$/
@@ -74,10 +78,15 @@ export function validateBatch(a: Asset[]) {
   if (!Array.isArray(a) || !a.length) throw new Error("请先选择图片");
   if (a.length > MAX_IMAGES) throw new Error("每批最多 100 张，请分批导出");
   const context = a[0];
+  const shared =
+    context.platform === "doubao" &&
+    context.conversationId.startsWith("thread:");
+  const parsed = contextFromUrl(
+    `https://${context.platform === "qianwen" ? "www.qianwen.com" : "www.doubao.com"}/${shared ? `thread/${context.conversationId.slice(7)}` : `chat/${context.conversationId}`}`,
+  );
   if (
-    !contextFromUrl(
-      `https://${context.platform === "qianwen" ? "www.qianwen.com" : "www.doubao.com"}/chat/${context.conversationId}`,
-    ) ||
+    parsed?.platform !== context.platform ||
+    parsed.conversationId !== context.conversationId ||
     a.some((x) => !validateAsset(x, context))
   )
     throw new Error("图片来源或会话不匹配，请刷新页面重试");

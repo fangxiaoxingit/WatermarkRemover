@@ -16,7 +16,7 @@ export const platforms: Record<
     color: "#6255d9",
     description:
       "导出聊天与分享页中，平台已提供的生成原图。保留原始画质与格式。",
-    status: "聊天页 · 已实测 / 分享页 · 待回归",
+    status: "聊天页与分享页 · 支持",
     limitations:
       "仅识别当前会话已加载的图片。参考图、水印变体与缩略图不会加入列表。",
   },
@@ -24,8 +24,9 @@ export const platforms: Record<
     name: "豆包",
     url: "https://www.doubao.com/chat/",
     color: "#368d79",
-    description: "从当前聊天的生成图片中读取原图资源，支持多图选择与批量保存。",
-    status: "聊天页 · 已实测 / 分享页 · 暂不支持",
+    description:
+      "从聊天页与分享页的生成图片中读取原图资源，支持多图选择与批量保存。",
+    status: "聊天页与分享页 · 支持",
     limitations:
       "部分账号与区域重绘、智能编辑、变清晰结果可能仍含水印。平台未提供无水印版本时，扩展无法修复图片。",
   },

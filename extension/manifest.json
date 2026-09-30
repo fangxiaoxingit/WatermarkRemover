@@ -1,15 +1,10 @@
 {
   "manifest_version": 3,
   "name": "AI 原图导出",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "minimum_chrome_version": "116",
   "description": "从支持的 AI 聊天平台中选择并导出平台提供的原始图片，支持单张下载和 ZIP 批量打包。",
-  "permissions": [
-    "downloads",
-    "storage",
-    "activeTab",
-    "offscreen"
-  ],
+  "permissions": ["downloads", "storage", "activeTab", "offscreen"],
   "host_permissions": [
     "https://workspace-zb-cdn.qianwen.com/*",
     "https://quark-aistudio-cdn.quark.cn/*",
@@ -39,11 +34,11 @@
         "https://www.qianwen.com/*",
         "https://qianwen.my.cn/share/chat/*",
         "https://doubao.com/chat/*",
-        "https://www.doubao.com/chat/*"
+        "https://www.doubao.com/chat/*",
+        "https://doubao.com/thread/*",
+        "https://www.doubao.com/thread/*"
       ],
-      "js": [
-        "bridge.js"
-      ],
+      "js": ["bridge.js"],
       "world": "MAIN",
       "run_at": "document_start"
     },
@@ -53,11 +48,11 @@
         "https://www.qianwen.com/*",
         "https://qianwen.my.cn/share/chat/*",
         "https://doubao.com/chat/*",
-        "https://www.doubao.com/chat/*"
+        "https://www.doubao.com/chat/*",
+        "https://doubao.com/thread/*",
+        "https://www.doubao.com/thread/*"
       ],
-      "js": [
-        "content.js"
-      ],
+      "js": ["content.js"],
       "run_at": "document_idle"
     }
   ],

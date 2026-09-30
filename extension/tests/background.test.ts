@@ -12,7 +12,8 @@ const asset = {
 };
 const page = {
   id: "abc",
-  tab: { id: 5 },
+  tab: { id: 5, url: "https://www.qianwen.com/chat/a" },
+  frameId: 0,
   url: "https://www.qianwen.com/chat/a",
 };
 const runner = { id: "abc", url: "chrome-extension://abc/offscreen.html" };
@@ -80,7 +81,7 @@ it("does not expose or cancel another tab task", async () => {
   });
   const result = await send(
     { type: "CANCEL_DOWNLOAD", id: value.id },
-    { ...page, tab: { id: 8 } },
+    { ...page, tab: { id: 8, url: page.tab.url } },
   );
   expect(result.ok).toBe(false);
   expect(chromeMock.downloads.cancel).not.toHaveBeenCalled();
@@ -257,4 +258,83 @@ it("does not mark an individual batch complete until every image is saved", asyn
   ).toBe(true);
   const retry = await send({ type: "RETRY_TASK", id: value.id });
   expect(data[`task:${retry.value.id}`].assets).toHaveLength(1);
+});
+
+it("downloads the current SPA chat instead of validating against the initial document URL", async () => {
+  const sender = {
+    ...page,
+    tab: { id: 5, url: "https://www.qianwen.com/chat/b" },
+  };
+  const reply = await send(
+    {
+      type: "CREATE_TASK",
+      assets: [{ ...asset, conversationId: "b" }],
+      mode: "single",
+    },
+    sender,
+  );
+  expect(reply.ok).toBe(true);
+  expect((await send({ type: "CURRENT_TASK" }, sender)).value.id).toBe(
+    reply.value.id,
+  );
+  expect(
+    (await send({ type: "CANCEL_DOWNLOAD", id: reply.value.id }, sender)).ok,
+  ).toBe(true);
+  const retry = await send({ type: "RETRY_TASK", id: reply.value.id }, sender);
+  expect(retry.ok).toBe(true);
+  expect(data[`task:${retry.value.id}`].assets[0].conversationId).toBe("b");
+});
+it("rejects stale chat assets and task controls after SPA navigation", async () => {
+  const old = await send({
+    type: "CREATE_TASK",
+    assets: [asset],
+    mode: "single",
+  });
+  const sender = {
+    ...page,
+    tab: { id: 5, url: "https://www.qianwen.com/chat/b" },
+  };
+  expect((await send({ type: "CURRENT_TASK" }, sender)).value).toBeNull();
+  expect(
+    (await send({ type: "CANCEL_DOWNLOAD", id: old.value.id }, sender)).ok,
+  ).toBe(false);
+  expect(
+    (
+      await send(
+        { type: "CREATE_TASK", assets: [asset], mode: "single" },
+        sender,
+      )
+    ).error,
+  ).toBe("图片来源不受支持");
+});
+it("rejects child frames, missing current URLs and unsupported or cross-origin tab URLs", async () => {
+  for (const sender of [
+    { ...page, frameId: 1 },
+    { ...page, tab: { id: 5 } },
+    { ...page, tab: { id: 5, url: "https://evil.test/chat/a" } },
+    { ...page, url: "https://evil.test/chat/a" },
+  ]) {
+    expect(
+      (
+        await send(
+          { type: "CREATE_TASK", assets: [asset], mode: "single" },
+          sender,
+        )
+      ).ok,
+    ).toBe(false);
+    expect(Object.keys(data).filter((k) => k.startsWith("task:"))).toHaveLength(
+      0,
+    );
+  }
+});
+it("downloads after navigating from the platform home page into a conversation", async () => {
+  const sender = { ...page, url: "https://www.qianwen.com/" };
+  expect(
+    (
+      await send(
+        { type: "CREATE_TASK", assets: [asset], mode: "single" },
+        sender,
+      )
+    ).ok,
+  ).toBe(true);
 });

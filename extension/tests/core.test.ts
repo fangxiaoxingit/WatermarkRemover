@@ -223,3 +223,36 @@ it("authenticates extension pages by protocol and host even for opaque URL origi
     ),
   ).toBe(false);
 });
+
+it("recognizes Doubao shares with a separate scope from private chats", () => {
+  expect(contextFromUrl("https://www.doubao.com/thread/testShare42")).toEqual({
+    platform: "doubao",
+    conversationId: "thread:testShare42",
+  });
+  expect(contextFromUrl("https://doubao.com/thread/123/")).toEqual({
+    platform: "doubao",
+    conversationId: "thread:123",
+  });
+  expect(
+    contextFromUrl("https://www.doubao.com/chat/123")?.conversationId,
+  ).toBe("123");
+  expect(contextFromUrl("https://www.doubao.com/thread/")).toBeNull();
+  expect(contextFromUrl("https://www.doubao.com/thread/a/extra")).toBeNull();
+});
+
+it("validates shared image batches using their thread scope", () => {
+  const shared = {
+    ...asset,
+    platform: "doubao" as const,
+    conversationId: "thread:testShare42",
+    originalUrl: "https://p6-flow-imagex-sign.byteimg.com/a.png",
+  };
+  expect(() => validateBatch([shared])).not.toThrow();
+  for (const conversationId of [
+    "thread:",
+    "thread:testShare42?other",
+    "thread:testShare42#other",
+  ]) {
+    expect(() => validateBatch([{ ...shared, conversationId }])).toThrow();
+  }
+});

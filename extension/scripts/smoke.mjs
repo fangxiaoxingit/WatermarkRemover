@@ -82,6 +82,48 @@ try {
   await context.route("https://p6-flow-imagex-sign.byteimg.com/**", (route) =>
     route.fulfill({ status: 200, contentType: "image/png", body: png }),
   );
+  const shared = await context.newPage();
+  await shared.goto("https://www.doubao.com/thread/testShare42");
+  const appendSharedImage = async (shareId, key) =>
+    shared.evaluate(
+      ({ shareId, key }) => {
+        const image = document.createElement("img");
+        image.alt = "image";
+        const message = { conversation_id: "", message_id: "shared-message" };
+        let fiber = { memoizedProps: { shareId, message } };
+        // The real share page has its image component at depth 13 and shareId at depth 34.
+        for (let n = 33; n >= 0; n--)
+          fiber = {
+            memoizedProps:
+              n === 13
+                ? {
+                    imageContent: {
+                      key,
+                      image_ori_raw: {
+                        url: "https://p6-flow-imagex-sign.byteimg.com/shared.png",
+                        width: 16,
+                        height: 16,
+                      },
+                    },
+                    message,
+                  }
+                : {},
+            return: fiber,
+          };
+        image.__reactFiber$fixture = fiber;
+        image.src = "https://p6-flow-imagex-sign.byteimg.com/shared.png";
+        document.body.append(image);
+      },
+      { shareId, key },
+    );
+  await appendSharedImage("otherShare", "wrong-share");
+  await appendSharedImage("testShare42", "shared-a");
+  await shared
+    .getByRole("button", { name: "导出原图 1" })
+    .waitFor({ timeout: 5000 });
+  console.log(
+    "PASS Doubao share extraction with matching shareId beyond 25 ancestors",
+  );
   const page = await context.newPage();
   await page.goto("https://www.qianwen.com/chat/chat-a");
   await page.getByRole("button", { name: "导出原图 1" }).waitFor();
@@ -520,7 +562,28 @@ try {
     document.body.append(s);
   }, fixture("new-chat"));
   await page.getByRole("button", { name: "导出原图 1" }).waitFor();
-  console.log("PASS SPA conversation isolation");
+  await worker.evaluate(() => {
+    globalThis.spaSenders = [];
+    chrome.runtime.onMessage.addListener((m, sender) => {
+      if (m.type === "CREATE_TASK")
+        globalThis.spaSenders.push({
+          url: sender.url,
+          tabUrl: sender.tab?.url,
+          frameId: sender.frameId,
+          documentId: sender.documentId,
+        });
+    });
+  });
+  await page.getByRole("button", { name: "导出原图 1" }).click();
+  await page.getByRole("button", { name: "下载", exact: true }).click();
+  const [spaSender] = await worker.evaluate(() => globalThis.spaSenders);
+  assert.equal(spaSender.url, "https://www.qianwen.com/chat/chat-a");
+  assert.equal(spaSender.tabUrl, "https://www.qianwen.com/chat/chat-b");
+  await page
+    .locator(".export-progress strong")
+    .filter({ hasText: "已完成" })
+    .waitFor({ timeout: 5000 });
+  console.log("PASS SPA conversation isolation and download without reload");
   await options.getByRole("button", { name: /支持平台/ }).click();
   await options.getByRole("checkbox", { name: "启用千问" }).uncheck();
   await page.locator("#wr-export-root").waitFor({ state: "detached" });
@@ -571,6 +634,29 @@ try {
     singleTabs.length,
   );
   console.log("PASS Doubao scoped raw image and inline single browser save");
+  await shared.getByRole("button", { name: "导出原图 1" }).click();
+  await shared.getByRole("button", { name: "下载", exact: true }).click();
+  await shared
+    .locator(".export-progress strong")
+    .filter({ hasText: "已完成" })
+    .waitFor();
+  const sharedSaved = (
+    await worker.evaluate(() => chrome.downloads.search({}))
+  ).sort((a, b) => b.id - a.id)[0];
+  assert.deepEqual(await readFile(sharedSaved.filename), png);
+  await shared.evaluate(() => history.pushState({}, "", "/thread/nextShare43"));
+  await shared.getByRole("button", { name: "导出原图 0" }).waitFor();
+  await appendSharedImage("nextShare43", "shared-b");
+  await shared.getByRole("button", { name: "导出原图 1" }).click();
+  assert.equal(await shared.locator(".export-progress strong").count(), 0);
+  await shared.getByRole("button", { name: "下载", exact: true }).click();
+  await shared
+    .locator(".export-progress strong")
+    .filter({ hasText: "已完成" })
+    .waitFor();
+  console.log(
+    "PASS Doubao share byte-identical download and SPA isolation without reload",
+  );
   const layoutPage = await context.newPage();
   await layoutPage.goto("https://www.qianwen.com/chat/layout");
   await layoutPage.evaluate(

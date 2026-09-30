@@ -1,0 +1,73 @@
+{
+  "manifest_version": 3,
+  "name": "AI 原图导出",
+  "version": "0.2.4",
+  "minimum_chrome_version": "116",
+  "description": "从支持的 AI 聊天平台中选择并导出平台提供的原始图片，支持单张下载和 ZIP 批量打包。",
+  "permissions": [
+    "downloads",
+    "storage",
+    "activeTab",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "https://workspace-zb-cdn.qianwen.com/*",
+    "https://quark-aistudio-cdn.quark.cn/*",
+    "https://*.byteimg.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "AI 原图导出",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://qianwen.com/*",
+        "https://www.qianwen.com/*",
+        "https://qianwen.my.cn/share/chat/*",
+        "https://doubao.com/chat/*",
+        "https://www.doubao.com/chat/*"
+      ],
+      "js": [
+        "bridge.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://qianwen.com/*",
+        "https://www.qianwen.com/*",
+        "https://qianwen.my.cn/share/chat/*",
+        "https://doubao.com/chat/*",
+        "https://www.doubao.com/chat/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

@@ -1,0 +1,17 @@
+:root,
+:host {
+  --wr-primary: #4d55cc;
+  --wr-primary-hover: #424ab8;
+  --wr-primary-translucent: #4d55cce6;
+  --wr-focus: #8990ef;
+  --wr-text: #282b42;
+  --wr-muted: #71758c;
+  --wr-subtle: #8c90a7;
+  --wr-background: #f7f8fd;
+  --wr-surface: #fafaff;
+  --wr-surface-alt: #f1f2fb;
+  --wr-soft: #eceefd;
+  --wr-soft-border: #d8dcf8;
+  --wr-border: #e1e3f1;
+  --wr-track: #dde1f7;
+}

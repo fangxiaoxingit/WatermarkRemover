@@ -1,0 +1,17 @@
+doc/
+.agents/
+skills-lock.json
+**/node_modules/
+**/dist/
+**/output/
+**/release/
+*.zip
+*.log
+.DS_Store
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+coverage/

@@ -1,42 +1,42 @@
-# AI 原图导出
+# AI Original Image Export
 
-[English](README.en.md)
+[简体中文](README.zh-CN.md)
 
-[官网与安装指南](https://www.xiaoxinnote.com/ai-original-export) · [下载最新版](https://github.com/fangxiaoxingit/WatermarkRemover/releases/latest/download/ai-original-export.zip)
+[Official website and installation guide](https://www.xiaoxinnote.com/ai-original-export) · [Download the latest version](https://github.com/fangxiaoxingit/WatermarkRemover/releases/latest/download/ai-original-export.zip)
 
-从支持的 AI 聊天平台中选择并导出平台提供的原始图片，支持单张下载、批量逐张保存和 ZIP 打包。
+Select and export original images provided by supported AI chat platforms. Save a single image, download selected images individually, or package them in a ZIP archive.
 
-桌面 Chrome / Edge 扩展，使用 Manifest V3，最低 Chrome 116。当前支持千问、豆包，后续可扩展其他平台。扩展提取平台已有的原图，不进行像素修复；原图本身仍可能含水印。
+A Manifest V3 extension for desktop Chrome / Edge, requiring Chrome 116 or later. Currently supports Qianwen (千问) and Doubao (豆包), with other platforms possible in future versions. The extension extracts original images already available on the platform and does not repair pixels; the original images themselves may still contain watermarks.
 
-## 下载与安装
+## Download and installation
 
-1. 从 [最新 Release](https://github.com/fangxiaoxingit/WatermarkRemover/releases/latest) 下载 `ai-original-export.zip` 并解压。
-2. 打开 `chrome://extensions/`（Edge 为 `edge://extensions/`），启用开发者模式。
-3. 点击“加载未打包的扩展程序”，选择解压后包含 `manifest.json` 的目录。
-4. 刷新聊天页或分享页，点击右下角“导出原图”；工具栏入口提供设置与平台说明。
+1. Download `ai-original-export.zip` from the [latest Release](https://github.com/fangxiaoxingit/WatermarkRemover/releases/latest) and extract it.
+2. Open `chrome://extensions/` (`edge://extensions/` in Edge) and enable Developer mode.
+3. Click **Load unpacked** and select the extracted folder containing `manifest.json`.
+4. Refresh the chat or shared conversation page, then click **Export original images** ("导出原图") in the bottom-right corner. The toolbar entry provides settings and platform information.
 
-更新时解压新版本，重新加载扩展并刷新聊天页或分享页。当前通过 GitHub 分发，尚未上架浏览器扩展商店。
+To update, extract the new version, reload the extension, and refresh the chat or shared conversation page. The extension is currently distributed through GitHub and is not yet listed in browser extension stores.
 
-## 功能与支持范围
+## Features and supported platforms
 
-- 支持简体中文与英文界面，默认跟随浏览器界面语言；可在设置页切换并记住偏好。
-- 图片预览、放大、选择，单张保存、批量逐张下载和 ZIP 打包。
-- 导出进度、取消和失败重试；关闭面板后任务继续运行。
-- 每批最多 100 张或 200 MB，保留原始图片字节和格式。
-- 千问：支持聊天页和分享页；仅识别当前会话已加载的生成图片。
-- 豆包：支持聊天页和 `/thread/` 分享页；历史图片需向上滚动加载。
+- English and Simplified Chinese interfaces, following the browser UI language by default. Change the language in settings; your preference is remembered.
+- Preview, enlarge, and select images; save a single image, download selected images individually, or create a ZIP archive.
+- Export progress, cancellation, and retries for failed items. Tasks continue after the panel is closed.
+- Up to 100 images or 200 MB per batch, preserving the original image bytes and formats.
+- Qianwen: supports chat and shared conversation pages; recognizes only generated images already loaded in the current conversation.
+- Doubao: supports chat pages and `/thread/` shared conversation pages; scroll up to load older images.
 
-平台内部数据格式可能变化，编辑、重绘、变清晰等结果及不同账号的原图可用性可能不同。Edge 尚未实测。
+Platforms may change their internal data formats. Original image availability may vary for edited, redrawn, or enhanced images, and between accounts. Edge has not yet been tested.
 
-## 隐私
+## Privacy
 
-图片识别和导出在浏览器本地完成。没有统计上报、自建后端或远程执行代码。扩展只在支持的平台页面运行，按白名单访问图片 CDN；获取图片时不携带 Cookie、不发送 Referrer，并拒绝重定向。
+Image detection and export run locally in the browser. There is no analytics reporting, project-operated backend, or remotely executed code. The extension runs only on supported platform pages and accesses image CDNs through an allowlist. Image requests do not include cookies or a Referrer header, and redirects are rejected.
 
-`downloads` 用于保存图片，`storage` 用于语言偏好、平台开关及会话内任务状态，`activeTab` 用于工具栏检查当前页面，`offscreen` 用于处理图片与 ZIP。源码中保留的是平台域名和虚构测试数据，不包含真实聊天记录或用户生成图片。
+The `downloads` permission saves images, `storage` stores language preferences, platform switches, and task state within a session, `activeTab` checks the current page from the toolbar, and `offscreen` processes images and ZIP archives. The source contains platform domain names and fictional test data, with no real chat histories or user-generated images.
 
-## 开发
+## Development
 
-需要 Node.js 22 或更新版本：
+Requires Node.js 22 or later:
 
 ```sh
 cd extension
@@ -45,20 +45,20 @@ npm test
 npm run build
 ```
 
-加载 `extension/dist/` 即可调试。浏览器集成验证：
+Load `extension/dist/` to debug the extension. For browser integration testing:
 
 ```sh
 npx playwright install chromium
 npm run test:browser
 ```
 
-更多使用和代码说明见 [extension/README.md](extension/README.md)。
+See [extension/README.en.md](extension/README.en.md) for more usage and code details.
 
-## 自动发布
+## Automated releases
 
-GitHub Actions 在主分支推送和 Pull Request 时运行测试与构建。推送 `v*` 标签时，核对标签、`extension/manifest.json` 和 `extension/package.json` 版本一致后，自动创建 Release、生成更新记录并上传安装包和 SHA-256 校验文件。
+GitHub Actions runs tests and builds on pushes to the main branch and on Pull Requests. When a `v*` tag is pushed, the workflow verifies that the tag, `extension/manifest.json`, and `extension/package.json` have matching versions, then creates a Release, generates release notes, and uploads the installation package and a SHA-256 checksum file.
 
-发布下一版时，先同步上述版本与锁文件，提交后执行：
+For the next release, synchronize these versions and the lockfile, commit the changes, then run:
 
 ```sh
 git tag -a v0.2.7 -m "发布 v0.2.7"
@@ -66,12 +66,12 @@ git push origin main
 git push origin v0.2.7
 ```
 
-示例标签需替换为待发布版本。工作流也可手动运行：在分支上运行仅生成构建产物，在版本标签上运行会发布或更新该标签的 Release。
+Replace the example tag with the version being released. The workflow can also be run manually: running it on a branch produces build artifacts only; running it on a version tag publishes or updates the Release for that tag.
 
-本地生成相同安装包：`cd extension && npm run release`。仅打包构建目录的运行文件，内部文档、样本图片和本地配置不会进入安装包。
+To generate the same installation package locally, run `cd extension && npm run release`. Only runtime files from the build directory are packaged; internal documentation, sample images, and local configuration are excluded.
 
-固定下载地址，方便宣传页使用：[下载最新版](https://github.com/fangxiaoxingit/WatermarkRemover/releases/latest/download/ai-original-export.zip)。
+Stable download link for promotional pages: [Download the latest version](https://github.com/fangxiaoxingit/WatermarkRemover/releases/latest/download/ai-original-export.zip).
 
-## 许可
+## License
 
-本项目使用 [MIT License](LICENSE)。第三方依赖和调研参考见 [NOTICE](extension/NOTICE.md)。
+This project uses the [MIT License](LICENSE). See [NOTICE](extension/NOTICE.md) for third-party dependencies and research references.

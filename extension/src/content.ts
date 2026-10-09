@@ -1,6 +1,17 @@
 import { contextFromUrl, Registry, validateBatch } from "./core";
 import { getSettings, platforms, defaults } from "./platforms";
 import { el, button, link, errorText, request, logo } from "./ui";
+import {
+  initLanguage,
+  getLocale,
+  onLanguageChange,
+  message,
+  setText,
+  setAttribute,
+  refreshTranslations,
+  type LocalizedText,
+} from "./i18n";
+import { isActiveStatus, statusLabel } from "./task-status";
 import type { Asset, TaskProgress } from "./types";
 import styles from "./panel.css?inline";
 let context = contextFromUrl(location.href),
@@ -39,24 +50,39 @@ function showImage(asset: Asset, index: number, trigger: HTMLButtonElement) {
   previewTrigger = trigger;
   const dialog = el("dialog", "image-viewer");
   viewer = dialog;
-  dialog.setAttribute("aria-label", `图片 ${index + 1} 大图预览`);
+  setAttribute(
+    dialog,
+    "aria-label",
+    message("图片 {index} 大图预览", { index: index + 1 }),
+  );
   const heading = el("div", "viewer-heading");
   const close = button("×", () => closeViewer(), "viewer-close");
-  close.setAttribute("aria-label", "关闭大图预览");
-  close.title = "关闭（Esc）";
-  heading.append(el("strong", "", `图片 ${index + 1}`), close);
+  setAttribute(close, "aria-label", "关闭大图预览");
+  setAttribute(close, "title", "关闭（Esc）");
+  heading.append(
+    el("strong", "", message("图片 {index}", { index: index + 1 })),
+    close,
+  );
   const stage = el("div", "viewer-stage");
   const image = el("img");
-  image.alt = `生成原图 ${index + 1}`;
+  setAttribute(image, "alt", message("生成原图 {index}", { index: index + 1 }));
   image.referrerPolicy = "no-referrer";
   const status = el("p", "viewer-status", "正在加载原图…");
   status.setAttribute("role", "status");
   image.addEventListener("load", () => {
-    status.textContent = `${image.naturalWidth} × ${image.naturalHeight} · 按 Esc 关闭`;
+    setText(
+      status,
+      message("{width} × {height} · 按 Esc 关闭", {
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      }),
+    );
   });
   image.addEventListener("error", () => {
-    status.textContent =
-      "原图加载失败，链接可能已过期，请关闭预览并刷新聊天页重试。";
+    setText(
+      status,
+      "原图加载失败，链接可能已过期，请关闭预览并刷新聊天页重试。",
+    );
   });
   image.src = asset.originalUrl;
   stage.append(image);
@@ -79,11 +105,7 @@ let exportTask: TaskProgress | null = null,
   starting = false,
   progressBox: HTMLElement;
 const busy = () =>
-  starting ||
-  (!!exportTask &&
-    ["准备中", "获取图片", "打包中", "浏览器保存中"].includes(
-      exportTask.status,
-    ));
+  starting || (!!exportTask && isActiveStatus(exportTask.status));
 function acceptProgress(task: TaskProgress | null) {
   if (
     task &&
@@ -102,7 +124,7 @@ function renderProgress() {
   if (progressBox.hidden) return;
   const task = exportTask,
     top = el("div", "progress-heading"),
-    title = el("strong", "", task?.status || "准备中"),
+    title = el("strong", "", statusLabel(task?.status || "preparing")),
     actions = el("div", "progress-actions");
   if (busy() && task)
     actions.append(
@@ -124,7 +146,7 @@ function renderProgress() {
   if (task?.retryable && !busy())
     actions.append(
       button(
-        task.status === "部分失败" ? "重试失败项" : "重试",
+        task.status === "partial" ? "重试失败项" : "重试",
         async (event) => {
           if (!event.isTrusted) return;
           starting = true;
@@ -155,7 +177,7 @@ function renderProgress() {
   const bar = el("progress");
   bar.max = 100;
   bar.value = task?.progress || 0;
-  bar.setAttribute("aria-label", "导出进度");
+  setAttribute(bar, "aria-label", "导出进度");
   const detail = el("p", "progress-detail", task?.detail || "正在准备导出");
   detail.setAttribute("role", "status");
   progressBox.append(top, bar, detail);
@@ -166,8 +188,8 @@ function renderProgress() {
 
 const control = (action: string) =>
   window.postMessage({ type: "WR_CONTROL", channel, action }, location.origin);
-function setNotice(text: string) {
-  if (notice) notice.textContent = text;
+function setNotice(text: string | LocalizedText) {
+  if (notice) setText(notice, text);
 }
 function dispose() {
   closeViewer(false);
@@ -185,27 +207,33 @@ function mount() {
   if (host || !context || !enabled) return;
   host = el("div");
   host.id = "wr-export-root";
+  host.lang = getLocale();
   root = host.attachShadow({ mode: "open" });
   const style = el("style");
   style.textContent = styles;
   root.append(style);
-  launch = button("导出原图", () => toggle(), "launcher");
-  launch.innerHTML = `${logo}<span>导出原图</span><b>0</b>`;
+  launch = button("", () => toggle(), "launcher");
+  launch.innerHTML = logo;
+  launch.append(el("span", "", "导出原图"), el("b", "", "0"));
   root.append(launch);
   panel = el("section", "panel");
   panel.setAttribute("role", "dialog");
-  panel.setAttribute("aria-label", "当前会话原图");
+  setAttribute(panel, "aria-label", "当前会话原图");
   panel.hidden = true;
   const header = el("header", "header"),
     brand = el("div", "brand");
   const mark = el("div", "mark");
   mark.innerHTML = logo;
   const heading = el("div");
-  heading.append(
-    el("div", "eyebrow", "ORIGINALS"),
-    el("h2", "", `${platforms[context.platform].name} · 原图导出`),
+  const title = el("h2");
+  title.append(
+    el("span", "", platforms[context.platform].name),
+    el("span", "", " · 原图导出"),
   );
+  heading.append(el("div", "eyebrow", "ORIGINALS"), title);
   brand.append(mark, heading);
+  const close = button("×", () => toggle(false), "close");
+  setAttribute(close, "aria-label", "关闭导出面板");
   header.append(
     brand,
     button(
@@ -220,14 +248,14 @@ function mount() {
       },
       "quiet",
     ),
-    button("×", () => toggle(false), "close"),
+    close,
   );
   panel.append(header);
   summary = el("p", "summary", "仅包含当前会话已加载的生成图片");
   panel.append(summary);
   progressBox = el("section", "export-progress");
   progressBox.hidden = true;
-  progressBox.setAttribute("aria-label", "导出状态");
+  setAttribute(progressBox, "aria-label", "导出状态");
   panel.append(progressBox);
   const toolbar = el("div", "toolbar");
   toolbar.append(
@@ -340,8 +368,13 @@ async function exportAssets(
 function render() {
   if (!registry || !panel || !context) return;
   const all = [...registry.assets.values()];
-  launch.querySelector("b")!.textContent = String(all.length);
-  summary.textContent = `已识别 ${all.length} 张 · 仅含当前会话已加载内容`;
+  setText(launch.querySelector("b")!, String(all.length));
+  setText(
+    summary,
+    message("已识别 {count} 张 · 仅含当前会话已加载内容", {
+      count: all.length,
+    }),
+  );
   grid.replaceChildren();
   if (!all.length) {
     const empty = el("div", "empty");
@@ -363,11 +396,19 @@ function render() {
     image.src = asset.previewUrl || asset.originalUrl;
     image.loading = "lazy";
     image.referrerPolicy = "no-referrer";
-    image.alt = `生成原图 ${index + 1}`;
+    setAttribute(
+      image,
+      "alt",
+      message("生成原图 {index}", { index: index + 1 }),
+    );
     const check = el("input");
     check.type = "checkbox";
     check.checked = registry!.selected.has(asset.assetId);
-    check.setAttribute("aria-label", `选择图片 ${index + 1}`);
+    setAttribute(
+      check,
+      "aria-label",
+      message("选择图片 {index}", { index: index + 1 }),
+    );
     check.addEventListener("change", () => {
       if (check.checked) registry!.selected.add(asset.assetId);
       else registry!.selected.delete(asset.assetId);
@@ -385,8 +426,12 @@ function render() {
       },
       "zoom-image",
     );
-    zoom.setAttribute("aria-label", `放大图片 ${index + 1}`);
-    zoom.title = "放大查看";
+    setAttribute(
+      zoom,
+      "aria-label",
+      message("放大图片 {index}", { index: index + 1 }),
+    );
+    setAttribute(zoom, "title", "放大查看");
     zoom.innerHTML =
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5M7.5 10.5h6m-3-3v6"/></svg>';
     media.append(label, zoom);
@@ -423,7 +468,11 @@ function renderFooter() {
   foot.replaceChildren();
   const info = el("div");
   info.append(
-    el("strong", "", `已选择 ${registry.selected.size} 张`),
+    el(
+      "strong",
+      "",
+      message("已选择 {count} 张", { count: registry.selected.size }),
+    ),
     el("span", "foot-note", "保留原始画质 · 单批最多 100 张"),
   );
   const save = button(
@@ -472,9 +521,23 @@ window.addEventListener("message", (event) => {
   lastSignature = signature;
   render();
   if (open && registry.assets.size > before)
-    setNotice(`新增 ${registry.assets.size - before} 张原图，尚未选中。`);
+    setNotice(
+      message("新增 {count} 张原图，尚未选中。", {
+        count: registry.assets.size - before,
+      }),
+    );
 });
+const languageReady = initLanguage().catch(() => {});
+let languageSubscribed = false;
 async function syncSettings() {
+  await languageReady;
+  if (!languageSubscribed) {
+    languageSubscribed = true;
+    onLanguageChange((locale) => {
+      if (host) host.lang = locale;
+      if (root) refreshTranslations(root);
+    });
+  }
   try {
     settings = await getSettings();
     settingsReady = true;
@@ -494,6 +557,14 @@ chrome.runtime.onMessage.addListener((message, _sender, reply) => {
     return;
   }
   if (message.type === "OPEN_PANEL") {
+    if (!settingsReady) {
+      void syncSettings().then(() => {
+        if (!host) mount();
+        toggle(true);
+        reply({ ok: !!host });
+      });
+      return true;
+    }
     if (!host) mount();
     toggle(true);
     reply({ ok: !!host });

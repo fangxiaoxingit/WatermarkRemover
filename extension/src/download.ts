@@ -1,11 +1,19 @@
 import { zipSync, strToU8 } from "fflate";
 import { imageFormat } from "./core";
-class DownloadError extends Error {
+import {
+  LocalizedError,
+  translate,
+  message,
+  type Locale,
+  type LocalizedText,
+} from "./i18n";
+class DownloadError extends LocalizedError {
   constructor(
     message: string,
     public retryable = false,
+    params?: Record<string, string | number>,
   ) {
-    super(message);
+    super(message, params);
   }
 }
 export async function fetchImage(
@@ -30,8 +38,9 @@ export async function fetchImage(
         throw new DownloadError(
           response.status === 401 || response.status === 403
             ? "链接已过期或缺少权限，请刷新当前页面重新获取"
-            : `获取失败（HTTP ${response.status}）`,
+            : "获取失败（HTTP {status}）",
           response.status >= 500 || response.status === 429,
+          { status: response.status },
         );
       }
       if (Number(response.headers.get("content-length")) > maxBytes) {
@@ -89,15 +98,24 @@ export async function fetchImage(
 }
 export async function makeArchive(
   files: Record<string, Uint8Array>,
-  errors: { index: number; error: string }[],
+  errors: { index: number; error: string | LocalizedText }[],
+  locale: Locale = "zh-CN",
 ): Promise<Uint8Array> {
   const entries = { ...files };
   if (errors.length)
-    entries["未完成.txt"] = strToU8(
+    entries[locale === "en" ? "failed-images.txt" : "未完成.txt"] = strToU8(
       errors
-        .map(
-          (x) =>
-            `图片 ${x.index}：${x.error.replace(/https?:\/\/\S+/g, "[链接已隐藏]")}`,
+        .map((x) =>
+          translate(
+            message("图片 {index}：{error}", {
+              index: x.index,
+              error: translate(x.error, locale).replace(
+                /https?:\/\/\S+/g,
+                translate("[链接已隐藏]", locale),
+              ),
+            }),
+            locale,
+          ),
         )
         .join("\n"),
     );

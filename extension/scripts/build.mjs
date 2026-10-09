@@ -1,5 +1,5 @@
 import { build } from "vite";
-import { mkdir, writeFile, copyFile, readFile } from "node:fs/promises";
+import { mkdir, writeFile, copyFile, readFile, cp } from "node:fs/promises";
 import { resolve } from "node:path";
 const root = process.cwd();
 await build({
@@ -34,6 +34,7 @@ for (const entry of ["content", "bridge", "background"])
     },
   });
 await copyFile("manifest.json", "dist/manifest.json");
+await cp("_locales", "dist/_locales", { recursive: true });
 await copyFile("NOTICE.md", "dist/NOTICE.md");
 await copyFile("../LICENSE", "dist/LICENSE");
 await mkdir("dist/licenses", { recursive: true });

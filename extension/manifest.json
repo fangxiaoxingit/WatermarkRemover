@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "AI 原图导出",
-  "version": "0.2.6",
+  "name": "__MSG_extensionName__",
+  "version": "0.2.7",
   "minimum_chrome_version": "116",
-  "description": "从支持的 AI 聊天平台中选择并导出平台提供的原始图片，支持单张下载和 ZIP 批量打包。",
+  "description": "__MSG_extensionDescription__",
   "permissions": ["downloads", "storage", "activeTab", "offscreen"],
   "host_permissions": [
     "https://workspace-zb-cdn.qianwen.com/*",
@@ -14,7 +14,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "AI 原图导出",
+    "default_title": "__MSG_extensionName__",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon-16.png",
@@ -64,5 +64,6 @@
     "32": "icons/icon-32.png",
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
-  }
+  },
+  "default_locale": "en"
 }

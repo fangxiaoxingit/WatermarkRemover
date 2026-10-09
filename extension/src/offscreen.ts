@@ -2,11 +2,19 @@ import { MAX_BYTES, filename, validateBatch } from "./core";
 import { fetchImage, makeArchive } from "./download";
 import { request, errorText } from "./ui";
 import type { Task } from "./types";
+import { LocalizedError, message, type LocalizedText } from "./i18n";
+import type { TaskStatus } from "./task-status";
 const running = new Map<string, AbortController>();
 const cancelled = new Set<string>();
+function failure(value: string | LocalizedText = "没有可保存的图片") {
+  return new LocalizedError(
+    typeof value === "string" ? value : value.key,
+    typeof value === "string" ? undefined : value.params,
+  );
+}
 async function run(task: Task, abort: AbortController) {
   const completed = new Map<number, { bytes: Uint8Array; ext: string }>(),
-    failures = new Map<number, string>();
+    failures = new Map<number, string | LocalizedText>();
   let received = 0,
     done = 0,
     savedCount = 0,
@@ -14,7 +22,11 @@ async function run(task: Task, abort: AbortController) {
     blobUrl = "";
   // Serialize reports so two download workers cannot regress the visible progress.
   let reports = Promise.resolve();
-  const report = (status: string, progress: number, detail: string) => {
+  const report = (
+    status: TaskStatus,
+    progress: number,
+    detail: string | LocalizedText,
+  ) => {
     reports = reports.then(() =>
       request({
         type: "TASK_STATUS",
@@ -29,16 +41,23 @@ async function run(task: Task, abort: AbortController) {
   };
   try {
     validateBatch(task.assets);
-    await report("获取图片", 0, `正在获取 ${task.assets.length} 张原图`);
+    await report(
+      "fetching",
+      0,
+      message("正在获取 {count} 张原图", { count: task.assets.length }),
+    );
     const worker = async () => {
       while (cursor < task.assets.length && !abort.signal.aborted) {
         const index = cursor++;
         try {
           if (task.mode === "individual")
             await report(
-              "获取图片",
+              "fetching",
               Math.round((index / task.assets.length) * 100),
-              `正在获取第 ${index + 1}/${task.assets.length} 张原图`,
+              message("正在获取第 {index}/{total} 张原图", {
+                index: index + 1,
+                total: task.assets.length,
+              }),
             );
           const data = await fetchImage(
             task.assets[index].originalUrl,
@@ -47,7 +66,9 @@ async function run(task: Task, abort: AbortController) {
             fetch,
             (bytes) => {
               if (received + bytes > MAX_BYTES)
-                throw new Error("单批超过 200 MB，请减少选择后分批导出");
+                throw new LocalizedError(
+                  "单批超过 200 MB，请减少选择后分批导出",
+                );
               received += bytes;
             },
           );
@@ -59,7 +80,7 @@ async function run(task: Task, abort: AbortController) {
             bitmap.close();
           } catch {
             received -= data.bytes.byteLength;
-            throw new Error("图片内容损坏，无法读取尺寸");
+            throw new LocalizedError("图片内容损坏，无法读取尺寸");
           }
           if (task.mode === "individual") {
             abort.signal.throwIfAborted();
@@ -78,6 +99,7 @@ async function run(task: Task, abort: AbortController) {
                   task.assets[index],
                   task.fileIndices?.[index] ?? index,
                   data.ext,
+                  task.locale,
                 ),
               });
               while (true) {
@@ -88,7 +110,7 @@ async function run(task: Task, abort: AbortController) {
                 });
                 if (state === "complete") break;
                 if (state === "interrupted")
-                  throw new Error("浏览器保存中断，请重试");
+                  throw new LocalizedError("浏览器保存中断，请重试");
                 await new Promise((resolve) => setTimeout(resolve, 400));
               }
               savedCount++;
@@ -102,12 +124,17 @@ async function run(task: Task, abort: AbortController) {
         }
         done++;
         await report(
-          "获取图片",
+          "fetching",
           Math.round(
             (done / task.assets.length) *
               (task.mode === "individual" ? 100 : 80),
           ),
-          `已处理 ${done}/${task.assets.length} 张 · 成功 ${task.mode === "individual" ? savedCount : completed.size} 张 · ${(received / 1024 / 1024).toFixed(1)} MB`,
+          message("已处理 {count}/{total} 张 · 成功 {saved} 张 · {size} MB", {
+            count: done,
+            total: task.assets.length,
+            saved: task.mode === "individual" ? savedCount : completed.size,
+            size: (received / 1024 / 1024).toFixed(1),
+          }),
         );
       }
     };
@@ -115,22 +142,25 @@ async function run(task: Task, abort: AbortController) {
     else await Promise.all([worker(), worker()]);
     abort.signal.throwIfAborted();
     if (task.mode === "individual") {
-      if (!savedCount)
-        throw new Error([...failures.values()][0] || "没有可保存的图片");
+      if (!savedCount) throw failure([...failures.values()][0]);
       await report(
-        failures.size ? "部分失败" : "已完成",
+        failures.size ? "partial" : "completed",
         100,
-        `已逐张保存 ${savedCount} 张原图${failures.size ? `，${failures.size} 张失败，可重试失败项` : "，可在下载文件夹查看"}`,
+        message(
+          failures.size
+            ? "已逐张保存 {count} 张原图，{failed} 张失败，可重试失败项"
+            : "已逐张保存 {count} 张原图，可在下载文件夹查看",
+          { count: savedCount, failed: failures.size },
+        ),
       );
       return;
     }
-    if (!completed.size)
-      throw new Error([...failures.values()][0] || "没有可保存的图片");
+    if (!completed.size) throw failure([...failures.values()][0]);
     await report(
-      "打包中",
+      "packing",
       85,
       task.mode === "zip"
-        ? `正在打包 ${completed.size} 张原图`
+        ? message("正在打包 {count} 张原图", { count: completed.size })
         : "正在准备原图",
     );
     const files: Record<string, Uint8Array> = {};
@@ -140,6 +170,7 @@ async function run(task: Task, abort: AbortController) {
           task.assets[index],
           task.fileIndices?.[index] ?? index,
           data.ext,
+          task.locale,
         )
       ] = data.bytes;
     let bytes: Uint8Array, name: string, mime: string;
@@ -150,8 +181,9 @@ async function run(task: Task, abort: AbortController) {
       bytes = await makeArchive(
         files,
         [...failures].map(([i, error]) => ({ index: i + 1, error })),
+        task.locale,
       );
-      name = `原图-${task.assets[0].platform}-${Date.now()}.zip`;
+      name = `${task.locale === "en" ? "original-images" : "原图"}-${task.assets[0].platform}-${Date.now()}.zip`;
       mime = "application/zip";
     }
     abort.signal.throwIfAborted();
@@ -171,20 +203,26 @@ async function run(task: Task, abort: AbortController) {
         id: task.id,
       });
       if (state === "complete") break;
-      if (state === "interrupted") throw new Error("浏览器保存中断，请重试");
+      if (state === "interrupted")
+        throw new LocalizedError("浏览器保存中断，请重试");
       await new Promise((resolve) => setTimeout(resolve, 400));
     }
     await report(
-      failures.size ? "部分失败" : "已完成",
+      failures.size ? "partial" : "completed",
       100,
-      `已保存 ${completed.size} 张原图${failures.size ? `，${failures.size} 张失败，可重试失败项` : "，可在下载文件夹查看"}`,
+      message(
+        failures.size
+          ? "已保存 {count} 张原图，{failed} 张失败，可重试失败项"
+          : "已保存 {count} 张原图，可在下载文件夹查看",
+        { count: completed.size, failed: failures.size },
+      ),
     );
   } catch (error) {
     await reports.catch(() => {});
     await request({
       type: "TASK_STATUS",
       id: task.id,
-      status: abort.signal.aborted ? "已取消" : "失败",
+      status: abort.signal.aborted ? "cancelled" : "failed",
       progress: 0,
       detail: errorText(error),
       failedIndices: [...failures.keys()],

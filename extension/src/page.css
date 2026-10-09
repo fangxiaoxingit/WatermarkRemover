@@ -21,6 +21,7 @@ body {
 }
 button,
 input,
+select,
 a {
   font: inherit;
 }
@@ -42,6 +43,7 @@ a {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
+select:focus-visible,
 summary:focus-visible {
   outline: 3px solid var(--wr-focus);
   outline-offset: 4px;
@@ -66,6 +68,39 @@ summary:focus-visible {
 .brand svg {
   width: 32px;
   height: 32px;
+  flex: none;
+}
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.language-control {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--wr-muted);
+  font-size: 12px;
+}
+.language-select {
+  appearance: none;
+  max-width: 180px;
+  border: 1px solid var(--wr-border);
+  border-radius: 8px;
+  padding: 7px 36px 7px 12px;
+  background-color: white;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='m3 4.5 3 3 3-3' stroke='%23666b85' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px 12px;
+  color: var(--wr-text);
+  cursor: pointer;
+}
+@media (forced-colors: active) {
+  .language-select {
+    appearance: auto;
+    background-image: none;
+  }
 }
 .version {
   color: var(--wr-subtle);
@@ -153,6 +188,7 @@ h1 {
   gap: 13px;
 }
 .platform-icon {
+  flex: none;
   height: 46px;
   width: 46px;
   border-radius: 13px;
@@ -247,6 +283,8 @@ h3 {
   padding-top: 15px;
   border-top: 1px solid var(--wr-border);
   font-size: 11px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 .muted {
   color: var(--wr-muted);
@@ -270,6 +308,7 @@ h3 {
   padding: 20px;
 }
 .step-number {
+  flex: none;
   font-size: 14px;
   color: var(--wr-primary);
   font-variant-numeric: tabular-nums;
@@ -380,6 +419,7 @@ h3 {
 }
 .popup .brand {
   font-size: 17px;
+  line-height: 1.4;
 }
 .popup > .primary,
 .popup > .button {
@@ -428,13 +468,31 @@ h3 {
   }
   .page-header {
     padding: 0 24px;
-    height: 70px;
+    min-height: 70px;
+    height: auto;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding-block: 15px;
   }
   .platform-card {
     padding: 22px;
   }
   .download-page {
     margin-top: 35px;
+  }
+}
+@media (max-width: 520px) {
+  .header-controls {
+    gap: 16px;
+  }
+  .language-control {
+    font-size: 11px;
+  }
+  .language-select {
+    max-width: 155px;
+  }
+  .sidebar nav {
+    flex-wrap: wrap;
   }
 }
 @media (prefers-reduced-motion: reduce) {

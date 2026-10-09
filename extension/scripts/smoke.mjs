@@ -33,6 +33,32 @@ try {
     context.serviceWorkers()[0] ||
     (await context.waitForEvent("serviceworker"));
   const id = new URL(worker.url()).host;
+  const languagePage = await context.newPage();
+  await languagePage.goto(`chrome-extension://${id}/options.html`);
+  const languageChoice = languagePage.locator("select[data-language]");
+  await languageChoice.waitFor({ timeout: 2000 });
+  assert.equal(await languageChoice.inputValue(), "auto");
+  const browserLanguage = await worker.evaluate(() =>
+    chrome.i18n.getUILanguage(),
+  );
+  assert.equal(
+    await languagePage.locator("html").getAttribute("lang"),
+    browserLanguage.toLowerCase().startsWith("zh") ? "zh-CN" : "en",
+  );
+  await languageChoice.selectOption("en");
+  await languagePage
+    .getByRole("heading", { name: "Settings & help" })
+    .waitFor();
+  await languagePage.screenshot({ path: join(out, "settings-en.png") });
+  await languagePage.reload();
+  assert.equal(
+    await languagePage.locator("select[data-language]").inputValue(),
+    "en",
+  );
+  await languagePage.locator("select[data-language]").selectOption("zh-CN");
+  await languagePage.getByRole("heading", { name: "设置与帮助" }).waitFor();
+  await languagePage.close();
+  console.log("PASS browser language default and persistent manual override");
   const resource =
     "https://workspace-zb-cdn.qianwen.com/original.png?auth_key=test";
   const fixture = (name = "a") => ({
@@ -243,7 +269,7 @@ try {
     await page.locator("#wr-export-root .panel").innerText(),
     /已选择 1 张/,
   );
-  await page.getByRole("button", { name: "×", exact: true }).click();
+  await page.getByRole("button", { name: "关闭导出面板", exact: true }).click();
   await page.getByRole("button", { name: "导出原图 2" }).click();
   assert.match(
     await page.locator("#wr-export-root .panel").innerText(),
@@ -281,6 +307,56 @@ try {
   await options.screenshot({ path: join(out, "help.png") });
   console.log("PASS settings persistence, disable cleanup, help navigation");
   await page.getByRole("button", { name: "导出原图 2" }).click();
+  await page
+    .getByRole("checkbox", { name: "选择图片 2", exact: true })
+    .uncheck();
+  await page.getByRole("button", { name: "放大图片 1", exact: true }).click();
+  await page.evaluate(() => {
+    const root = document.querySelector("#wr-export-root").shadowRoot;
+    window.languageNodes = {
+      dialog: root.querySelector(".image-viewer"),
+      check: root.querySelectorAll(".preview input")[1],
+      focus: root.activeElement,
+    };
+  });
+  await options.locator("details").first().locator("summary").click();
+  await options.locator("select[data-language]").selectOption("en");
+  await page
+    .locator("#wr-export-root[lang='en']")
+    .waitFor({ state: "attached" });
+  assert(
+    await page.evaluate(() => {
+      const root = document.querySelector("#wr-export-root").shadowRoot;
+      return (
+        window.languageNodes.dialog === root.querySelector(".image-viewer") &&
+        window.languageNodes.check ===
+          root.querySelectorAll(".preview input")[1] &&
+        !window.languageNodes.check.checked &&
+        window.languageNodes.focus === root.activeElement
+      );
+    }),
+  );
+  assert.equal(
+    await options.locator("details").first().getAttribute("open"),
+    "",
+  );
+  assert(!/[\p{Script=Han}]/u.test(await page.locator(".panel").innerText()));
+  await page.locator(".viewer-close").click();
+  await page.screenshot({ path: join(out, "qianwen-panel-en.png") });
+  await options.screenshot({ path: join(out, "help-en.png") });
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${id}/popup.html`);
+  await popup.getByRole("button", { name: "Settings & help" }).waitFor();
+  await popup.locator("#app").screenshot({ path: join(out, "popup-en.png") });
+  await popup.close();
+  await options.locator("select[data-language]").selectOption("zh-CN");
+  await page
+    .locator("#wr-export-root[lang='zh-CN']")
+    .waitFor({ state: "attached" });
+  await page.getByRole("checkbox", { name: "选择图片 2", exact: true }).check();
+  console.log(
+    "PASS live language switch preserves selection, preview, focus and expanded FAQ",
+  );
   // Offscreen documents are not Playwright pages; route their fixture requests via their CDP target.
   await worker.evaluate(() =>
     chrome.offscreen.createDocument({
@@ -453,6 +529,34 @@ try {
   holdAt = requestNumber + 2;
   await individualButton.click();
   await page.getByText("正在获取第 2/2 张原图", { exact: true }).waitFor();
+  const activeTask = await worker.evaluate(async () => {
+    const data = await chrome.storage.session.get(null);
+    return Object.values(data).find(
+      (task) => task?.mode === "individual" && task.status === "fetching",
+    )?.id;
+  });
+  assert(activeTask);
+  await options.locator("select[data-language]").selectOption("en");
+  await page
+    .locator("#wr-export-root[lang='en']")
+    .waitFor({ state: "attached" });
+  assert(
+    !/[\p{Script=Han}]/u.test(
+      await page.locator(".export-progress").innerText(),
+    ),
+  );
+  assert.equal(
+    await worker.evaluate(
+      async (id) =>
+        (await chrome.storage.session.get(`task:${id}`))[`task:${id}`].status,
+      activeTask,
+    ),
+    "fetching",
+  );
+  await options.locator("select[data-language]").selectOption("zh-CN");
+  await page
+    .locator("#wr-export-root[lang='zh-CN']")
+    .waitFor({ state: "attached" });
   await page.getByRole("button", { name: "取消", exact: true }).click();
   await page
     .locator(".export-progress strong")
@@ -490,7 +594,7 @@ try {
     true,
   );
   await page.screenshot({ path: join(out, "inline-export-progress.png") });
-  await page.getByRole("button", { name: "×", exact: true }).click();
+  await page.getByRole("button", { name: "关闭导出面板", exact: true }).click();
   hold = false;
   for (const resume of held.splice(0)) await resume();
   await page.getByRole("button", { name: "导出原图 2" }).click();
@@ -685,6 +789,60 @@ try {
   );
   await layoutPage.screenshot({ path: join(out, "five-column-panel.png") });
   console.log("PASS five compact thumbnails per row");
+  await options.locator("select[data-language]").selectOption("en");
+  await layoutPage
+    .locator("#wr-export-root[lang='en']")
+    .waitFor({ state: "attached" });
+  for (const width of [1440, 660, 540, 390]) {
+    await layoutPage.setViewportSize({ width, height: 1000 });
+    await layoutPage.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
+    const overflow = await layoutPage.locator(".panel").evaluate((panel) => {
+      const bounds = panel.getBoundingClientRect();
+      return [
+        ...panel.querySelectorAll(
+          ".toolbar button, .footer button, .card-actions > *, .header button",
+        ),
+      ].some((node) => {
+        const rect = node.getBoundingClientRect();
+        return (
+          rect.left < bounds.left - 1 ||
+          rect.right > bounds.right + 1 ||
+          node.scrollWidth > node.clientWidth + 1
+        );
+      });
+    });
+    assert.equal(overflow, false, `English controls fit at ${width}px`);
+    await layoutPage.screenshot({ path: join(out, `panel-en-${width}.png`) });
+  }
+  await layoutPage.evaluate(() => {
+    const root = document.querySelector("#wr-export-root").shadowRoot;
+    const grid = root.querySelector(".grid");
+    grid.scrollTop = 100;
+    window.languageScroll = { grid, scrollTop: grid.scrollTop };
+  });
+  await options.locator("select[data-language]").selectOption("zh-CN");
+  await layoutPage
+    .locator("#wr-export-root[lang='zh-CN']")
+    .waitFor({ state: "attached" });
+  assert(
+    await layoutPage.evaluate(() => {
+      const grid = document
+        .querySelector("#wr-export-root")
+        .shadowRoot.querySelector(".grid");
+      return (
+        grid === window.languageScroll.grid &&
+        grid.scrollTop === window.languageScroll.scrollTop
+      );
+    }),
+  );
+  console.log(
+    "PASS English layouts and language switch without rebuilding the image grid",
+  );
   assert.deepEqual(errors, []);
   console.log("SMOKE PASS");
 } finally {

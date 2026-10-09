@@ -3,6 +3,7 @@ export const platforms: Record<
   Platform,
   {
     name: string;
+    icon: string;
     url: string;
     color: string;
     description: string;
@@ -12,6 +13,7 @@ export const platforms: Record<
 > = {
   qianwen: {
     name: "千问",
+    icon: "Q",
     url: "https://www.qianwen.com/",
     color: "#6255d9",
     description:
@@ -22,6 +24,7 @@ export const platforms: Record<
   },
   doubao: {
     name: "豆包",
+    icon: "D",
     url: "https://www.doubao.com/chat/",
     color: "#368d79",
     description:

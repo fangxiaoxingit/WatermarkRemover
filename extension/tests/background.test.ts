@@ -110,7 +110,7 @@ it("serializes cancel after a delayed download id and preserves the requested fi
   finish(7);
   await Promise.all([saving, cancelling]);
   expect(chromeMock.downloads.cancel).toHaveBeenCalledWith(7);
-  expect(data[`task:${value.id}`].status).toBe("已取消");
+  expect(data[`task:${value.id}`].status).toBe("cancelled");
   const suggest = vi.fn();
   handlers.filename(
     { byExtensionId: "abc", url: "blob:chrome-extension://abc/abcd" },
@@ -130,7 +130,7 @@ it("serializes cancel after a delayed download id and preserves the requested fi
     { type: "TASK_STATUS", id: value.id, status: "已完成", progress: 100 },
     runner,
   );
-  expect(data[`task:${value.id}`].status).toBe("已取消");
+  expect(data[`task:${value.id}`].status).toBe("cancelled");
 });
 it("refuses page-origin status or blob commands", async () => {
   const { value } = await send({
@@ -305,7 +305,7 @@ it("rejects stale chat assets and task controls after SPA navigation", async () 
         sender,
       )
     ).error,
-  ).toBe("图片来源不受支持");
+  ).toEqual({ key: "图片来源不受支持" });
 });
 it("rejects child frames, missing current URLs and unsupported or cross-origin tab URLs", async () => {
   for (const sender of [
@@ -337,4 +337,81 @@ it("downloads after navigating from the platform home page into a conversation",
       )
     ).ok,
   ).toBe(true);
+});
+
+it("captures the selected export language and keeps it while UI preferences change", async () => {
+  data.language = "en";
+  const { value } = await send({
+    type: "CREATE_TASK",
+    assets: [asset],
+    mode: "single",
+  });
+  const task = data[`task:${value.id}`];
+  expect(task.locale).toBe("en");
+  expect(task.status).toBe("preparing");
+  expect(task.detail).toEqual({
+    key: "准备导出 {count} 张原图",
+    params: { count: 1 },
+  });
+  data.language = "zh-CN";
+  await send(
+    {
+      type: "SAVE_BLOB",
+      id: value.id,
+      url: "blob:chrome-extension://abc/one",
+      filename: "one.png",
+    },
+    runner,
+  );
+  expect(chromeMock.downloads.download).toHaveBeenCalledWith(
+    expect.objectContaining({ filename: "Original Images/one.png" }),
+  );
+  expect(data[`task:${value.id}`].status).toBe("saving");
+  await send({ type: "CANCEL_DOWNLOAD", id: value.id });
+  expect(data[`task:${value.id}`].status).toBe("cancelled");
+  const retry = await send({ type: "RETRY_TASK", id: value.id });
+  expect(retry.ok).toBe(true);
+  expect(data[`task:${retry.value.id}`].locale).toBe("en");
+});
+
+it("uses browser UI language in auto mode and sends localizable validation errors", async () => {
+  chromeMock.i18n = { getUILanguage: () => "en-GB" };
+  const { value } = await send({
+    type: "CREATE_TASK",
+    assets: [asset],
+    mode: "zip",
+  });
+  expect(data[`task:${value.id}`].locale).toBe("en");
+  const invalid = await send({
+    type: "CREATE_TASK",
+    assets: [{ ...asset, conversationId: "other" }],
+    mode: "single",
+  });
+  expect(invalid.error).toEqual({ key: "图片来源不受支持" });
+});
+
+it("restores pre-internationalization task details for display in the current UI language", async () => {
+  const { value } = await send({
+    type: "CREATE_TASK",
+    assets: [asset],
+    mode: "zip",
+  });
+  const task = data[`task:${value.id}`];
+  delete task.locale;
+  const { translate } = await import("../src/i18n");
+  for (const [status, detail, label, english] of [
+    [
+      "已完成",
+      "已保存 2 张原图，可在下载文件夹查看",
+      "completed",
+      "2 original images saved. Find them in the Downloads folder.",
+    ],
+    ["获取图片", "正在获取 3 张原图", "fetching", "Fetching 3 original images"],
+    ["失败", "获取失败（HTTP 404）", "failed", "Fetch failed (HTTP 404)"],
+  ]) {
+    Object.assign(task, { status, detail });
+    const current = await send({ type: "CURRENT_TASK" });
+    expect(current.value.status).toBe(label);
+    expect(translate(current.value.detail, "en")).toBe(english);
+  }
 });

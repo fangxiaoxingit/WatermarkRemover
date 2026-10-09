@@ -58,3 +58,22 @@ it("keeps originals byte-for-byte inside ZIP and includes sanitized failures", a
   expect(files["image.png"]).toEqual(png);
   expect(new TextDecoder().decode(files["未完成.txt"])).toContain("2");
 });
+
+it("writes English failure notes without exposing image URLs or changing original bytes", async () => {
+  const zip = await makeArchive(
+    { "image.png": png },
+    [
+      { index: 2, error: "网络失败，请检查连接后重试" },
+      { index: 3, error: "https://private.test/token" },
+    ],
+    "en",
+  );
+  const files = unzipSync(zip);
+  expect(files["image.png"]).toEqual(png);
+  expect(files["未完成.txt"]).toBeUndefined();
+  const note = new TextDecoder().decode(files["failed-images.txt"]);
+  expect(note).toContain("Image 2");
+  expect(note).toContain("Network");
+  expect(note).not.toContain("https://private.test");
+  expect(note).toContain("[URL hidden]");
+});

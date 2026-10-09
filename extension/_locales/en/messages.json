@@ -1,0 +1,8 @@
+{
+  "extensionName": {
+    "message": "AI Original Image Export"
+  },
+  "extensionDescription": {
+    "message": "Select and export original images provided by supported AI chat platforms. Download single images, save individually, or create a ZIP archive."
+  }
+}

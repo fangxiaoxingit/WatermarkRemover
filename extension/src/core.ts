@@ -1,3 +1,4 @@
+import { LocalizedError, type Locale } from "./i18n";
 import type { Asset, Context, Platform } from "./types";
 export const MAX_IMAGES = 100,
   MAX_BYTES = 200 * 1024 * 1024;
@@ -75,8 +76,9 @@ function boundedDimension(n: unknown) {
     : 0;
 }
 export function validateBatch(a: Asset[]) {
-  if (!Array.isArray(a) || !a.length) throw new Error("请先选择图片");
-  if (a.length > MAX_IMAGES) throw new Error("每批最多 100 张，请分批导出");
+  if (!Array.isArray(a) || !a.length) throw new LocalizedError("请先选择图片");
+  if (a.length > MAX_IMAGES)
+    throw new LocalizedError("每批最多 100 张，请分批导出");
   const context = a[0];
   const shared =
     context.platform === "doubao" &&
@@ -89,7 +91,7 @@ export function validateBatch(a: Asset[]) {
     parsed.conversationId !== context.conversationId ||
     a.some((x) => !validateAsset(x, context))
   )
-    throw new Error("图片来源或会话不匹配，请刷新页面重试");
+    throw new LocalizedError("图片来源或会话不匹配，请刷新页面重试");
 }
 export function imageFormat(
   b: Uint8Array,
@@ -137,8 +139,21 @@ export class Registry {
 }
 export const safeName = (s: string) =>
   s.replace(/[^\w\u4e00-\u9fff-]/g, "_").slice(0, 80) || "image";
-export function filename(a: Asset, index: number, ext: string) {
-  return `${a.platform === "qianwen" ? "千问" : "豆包"}-${safeName(a.conversationId).slice(-8)}-${String(index + 1).padStart(3, "0")}.${ext}`;
+export function filename(
+  a: Asset,
+  index: number,
+  ext: string,
+  locale: Locale = "zh-CN",
+) {
+  const platform =
+    locale === "en"
+      ? a.platform === "qianwen"
+        ? "Qianwen"
+        : "Doubao"
+      : a.platform === "qianwen"
+        ? "千问"
+        : "豆包";
+  return `${platform}-${safeName(a.conversationId).slice(-8)}-${String(index + 1).padStart(3, "0")}.${ext}`;
 }
 export function isExtensionPage(url: string, id: string, path?: string) {
   try {

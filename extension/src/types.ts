@@ -1,3 +1,5 @@
+import type { Locale, LocalizedText } from "./i18n";
+import type { TaskStatus } from "./task-status";
 export type Platform = "qianwen" | "doubao";
 export interface Context {
   platform: Platform;
@@ -20,20 +22,21 @@ export interface Task {
   downloads?: Record<number, number>;
   savedIndices?: number[];
   createdAt: number;
-  status: string;
+  status: TaskStatus;
+  locale: Locale;
   downloadId?: number;
   error?: string;
   ownerTab?: number;
   progress?: number;
-  detail?: string;
+  detail?: string | LocalizedText;
   failedIndices?: number[];
 }
 export interface TaskProgress {
   id: string;
   platform?: Platform;
   conversationId?: string;
-  status: string;
+  status: TaskStatus;
   progress: number;
-  detail: string;
+  detail: string | LocalizedText;
   retryable: boolean;
 }

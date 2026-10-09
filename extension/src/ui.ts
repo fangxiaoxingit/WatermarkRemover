@@ -1,15 +1,21 @@
+import {
+  setText,
+  errorMessage,
+  LocalizedError,
+  type LocalizedText,
+} from "./i18n";
 export function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   className = "",
-  text = "",
+  text: string | LocalizedText = "",
 ): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
   node.className = className;
-  if (text) node.textContent = text;
+  if (text) setText(node, text);
   return node;
 }
 export function button(
-  text: string,
+  text: string | LocalizedText,
   fn: (event: MouseEvent) => void,
   className = "button",
 ) {
@@ -18,7 +24,11 @@ export function button(
   b.addEventListener("click", fn);
   return b;
 }
-export function link(text: string, url: string, className = "text-link") {
+export function link(
+  text: string | LocalizedText,
+  url: string,
+  className = "text-link",
+) {
   const a = el("a", className, text);
   a.href = url;
   a.target = "_blank";
@@ -26,12 +36,14 @@ export function link(text: string, url: string, className = "text-link") {
   return a;
 }
 export function errorText(e: unknown) {
-  return e instanceof Error ? e.message : "操作失败，请重试";
+  return errorMessage(e);
 }
 export async function request<T = any>(message: unknown): Promise<T> {
   const result = await chrome.runtime.sendMessage(message);
   if (!result?.ok)
-    throw new Error(result?.error || "扩展连接已失效，请刷新页面");
+    throw new LocalizedError(
+      errorMessage(result?.error || "扩展连接已失效，请刷新页面"),
+    );
   return result.value;
 }
 import iconSource from "../icons/source.svg?raw";

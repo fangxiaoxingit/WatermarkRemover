@@ -23,6 +23,9 @@ const rootFiles = new Set([
   "NOTICE.md",
   "LICENSE",
 ]);
+const localeFiles = ["en", "zh_CN", "zh_TW"].map(
+  (locale) => `_locales/${locale}/messages.json`,
+);
 const entries = {};
 async function collect(dir) {
   for (const name of (await readdir(dir)).sort()) {
@@ -39,7 +42,8 @@ async function collect(dir) {
         rootFiles.has(key) ||
         /^assets\/[\w.-]+\.(js|css)$/.test(key) ||
         /^icons\/icon-(16|32|48|128)\.png$/.test(key) ||
-        key === "licenses/fflate-MIT.txt"
+        key === "licenses/fflate-MIT.txt" ||
+        localeFiles.includes(key)
       )
     )
       throw new Error(`Unexpected build file: ${key}`);
@@ -50,7 +54,7 @@ async function collect(dir) {
   }
 }
 await collect(resolve("dist"));
-for (const file of rootFiles)
+for (const file of [...rootFiles, ...localeFiles])
   if (!entries[file]) throw new Error(`Missing runtime file: ${file}`);
 await mkdir("release", { recursive: true });
 const zip = zipSync(entries, { level: 9 });
